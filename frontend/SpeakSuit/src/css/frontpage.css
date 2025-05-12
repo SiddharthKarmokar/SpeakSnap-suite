@@ -1,0 +1,56 @@
+/* Default (Light Mode) Styles */
+body {
+  background-color: #FFFFFF;
+  color: #333333;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark Mode Styles */
+body.dark {
+  background-color: #121212;
+}
+
+body.dark h1 {
+  color: #BB86FC; /* Light purple for dark mode */
+}
+
+/* Dark Mode for Buttons */
+body.dark button {
+  color: white;
+  background-color: #6200EE; /* Purple background */
+}
+
+body.dark button:hover {
+  background-color: #3700B3; /* Darker purple */
+}
+
+/* Button Styles */
+button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 25px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #3700B3; /* Darker shade for hover */
+  color: white;
+}
+
+/* Search bar styling */
+input {
+  width: 50%;
+  height: 50px;
+  padding: 0 20px;
+  font-size: 18px;
+  border-radius: 25px;
+  border: 2px solid #1A73E8;
+  margin-bottom: 20px;
+  transition: border-color 0.3s ease;
+}
+
+input:focus {
+  border-color: #6200EE;
+}
