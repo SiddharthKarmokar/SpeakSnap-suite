@@ -22,7 +22,6 @@ COPY --from=backend-build /app/backend ./
 # Install dotenv CLI for runtime env var support
 RUN npm install -g dotenv-cli
 
-# Set runtime environment
 ENV NODE_ENV=production
 EXPOSE 8080
 
