@@ -37,6 +37,7 @@ export const Frontpage = () => {
         const userPassword = prompt("This meeting is password protected. Please enter the password.");
         if (userPassword) {
           setPassword(userPassword);
+          console.log( {meetingId, userName, password});
           navigate("/meeting", { state: { meetingId, userName, password: meetingPassword } });
         } else {
           alert("Password is required to join the meeting.");
@@ -50,17 +51,17 @@ export const Frontpage = () => {
     }
   };
 
-const extractMeetingId = (input) => {
-  try {
-    const url = new URL(input);
-    if (url.hostname.includes("meet.jit.si")) {
-      return url.pathname.split("/").pop(); // last part is meeting ID
+  const extractMeetingId = (input) => {
+    try {
+      const url = new URL(input);
+      if (url.hostname.includes("meet.jit.si")) {
+        return url.pathname.split("/").pop(); // last part is meeting ID
+      }
+    } catch {
+      // Not a URL — treat as meeting ID directly
     }
-  } catch {
-    // Not a URL — treat as meeting ID directly
-  }
-  return input.trim(); // fallback to direct input
-};
+    return input.trim(); // fallback to direct input
+  };
 
   // Function to check if the room is password-protected (you can adjust the logic as per your needs)
   const isPasswordProtectedRoom = (url) => {
