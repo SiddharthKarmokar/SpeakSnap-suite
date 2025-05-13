@@ -1,23 +1,30 @@
-# Stage 1: Build React frontend
+# Stage 1: Build frontend
 FROM node:18 AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
 RUN npm install
-COPY frontend/ .
+COPY frontend/ ./
 RUN npm run build
 
-# Stage 2: Prepare Node.js backend
-FROM node:18 AS backend
+# Stage 2: Prepare backend with built frontend
+FROM node:18 AS backend-build
 WORKDIR /app
 COPY backend/ ./backend
-COPY --from=frontend-build /app/frontend/build ./backend/public
+COPY --from=frontend-build /app/frontend/dist ./backend/public
 WORKDIR /app/backend
 RUN npm install
 
 # Stage 3: Final production image
 FROM node:18-slim
 WORKDIR /app
-COPY --from=backend /app/backend ./
+COPY --from=backend-build /app/backend ./
+
+# Install dotenv CLI for runtime env var support
+RUN npm install -g dotenv-cli
+
+# Set runtime environment
 ENV NODE_ENV=production
-EXPOSE 3000
-CMD ["node", "server.js"]
+EXPOSE 8080
+
+# Start with dotenv (expects `.env` file or ENV vars)
+CMD ["dotenv", "--", "node", "server.js"]
