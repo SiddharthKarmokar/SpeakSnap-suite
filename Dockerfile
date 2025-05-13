@@ -26,5 +26,4 @@ RUN npm install -g dotenv-cli
 ENV NODE_ENV=production
 EXPOSE 8080
 
-# Start with dotenv (expects `.env` file or ENV vars)
 CMD ["dotenv", "--", "node", "server.js"]
