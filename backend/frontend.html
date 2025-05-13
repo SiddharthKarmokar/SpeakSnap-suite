@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Real-Time Speech-to-Text</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 2rem;
+      max-width: 600px;
+      margin: auto;
+    }
+    #transcript {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    button {
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎤 Real-Time Speech to Text (Azure)</h2>
+  <div id="transcript">Transcript will appear here...</div>
+  <button onclick="toggleRecording()">🎙️ Start / Stop Recording</button>
+
+  <script>
+    let socket;
+    let audioContext;
+    let processor;
+    let input;
+    let stream;
+    let isRecording = false;
+
+    const transcriptDiv = document.getElementById("transcript");
+
+    function convertFloat32ToInt16(buffer) {
+      let l = buffer.length;
+      const result = new Int16Array(l);
+      for (let i = 0; i < l; i++) {
+        result[i] = Math.max(-1, Math.min(1, buffer[i])) * 0x7FFF;
+      }
+      return new Uint8Array(result.buffer);
+    }
+
+    async function startRecording() {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      input = audioContext.createMediaStreamSource(stream);
+
+      processor = audioContext.createScriptProcessor(4096, 1, 1);
+      input.connect(processor);
+      processor.connect(audioContext.destination);
+
+      socket = new WebSocket("ws://localhost:8080");
+
+      socket.onopen = () => {
+        console.log("WebSocket connected");
+      };
+
+      let currentTranscript = "";
+let partialTranscript = "";
+
+socket.onmessage = (event) => {
+  const text = event.data;
+
+  // Heuristic: if final result ends in period, it's final
+  if (text.endsWith('.') || text.endsWith('?') || text.endsWith('!')) {
+    currentTranscript += text + " ";
+    partialTranscript = "";
+  } else {
+    partialTranscript = text;
+  }
+
+  transcriptDiv.textContent = currentTranscript + partialTranscript;
+  transcriptDiv.scrollTop = transcriptDiv.scrollHeight;
+};
+
+
+      processor.onaudioprocess = (e) => {
+        if (!isRecording) return;
+        const inputData = e.inputBuffer.getChannelData(0); // mono channel
+        const pcmData = convertFloat32ToInt16(inputData);
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(pcmData);
+        }
+      };
+
+      isRecording = true;
+    }
+
+    function stopRecording() {
+      isRecording = false;
+      if (processor) {
+        processor.disconnect();
+        processor = null;
+      }
+      if (input) {
+        input.disconnect();
+        input = null;
+      }
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.close();
+      }
+      if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+      }
+      console.log("Recording stopped");
+    }
+
+    function toggleRecording() {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    }
+  </script>
+</body>
+</html>
