@@ -12,9 +12,6 @@ WORKDIR /app
 
 # Copy backend files
 COPY backend/ ./backend
-# Copy the built frontend (dist) into the backend's public folder
-COPY --from=frontend-build /app/frontend/dist ./backend/public
-
 # Install dependencies for backend
 WORKDIR /app/backend
 RUN npm install
