@@ -47,7 +47,7 @@ jobs:
 
       - name: Debug image name
         run: | 
-          echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY_NAME }}:latest"
+          echo "Image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest"
       
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
