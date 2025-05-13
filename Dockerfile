@@ -2,22 +2,21 @@
 FROM node:18 AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install vite@4.4.0
 RUN npm install
 COPY frontend/ ./
 
-# Stage 2: Prepare backend with built frontend
-FROM node:18 AS backend-build
-WORKDIR /app
-COPY backend/ ./backend
-COPY --from=frontend-build /app/frontend/dist ./backend/public  # Move built frontend to backend public folder
-WORKDIR /app/backend
-RUN npm install
-
-# Stage 3: Final production image
+# Stage 2: Final production image (no separate backend build)
 FROM node:18-slim
 WORKDIR /app
-COPY --from=backend-build /app/backend ./backend
+
+# Copy backend files
+COPY backend/ ./backend
+# Copy the built frontend (dist) into the backend's public folder
+COPY --from=frontend-build /app/frontend/dist ./backend/public
+
+# Install dependencies for backend
+WORKDIR /app/backend
+RUN npm install
 
 # Install dotenv CLI for runtime env var support
 RUN npm install -g dotenv-cli
