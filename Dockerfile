@@ -2,6 +2,7 @@
 FROM node:18 AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
+RUN npm install vite@4.4.0  # Pin vite version
 RUN npm install
 COPY frontend/ ./
 RUN npm run build
