@@ -245,3 +245,10 @@ The response schema is as follows:
 ## 📄 License
 
 MIT License – See individual folders for details.
+
+---
+
+## 👥 Contributors
+- [**Siddharth Karmokar**](https://github.com/SiddharthKarmoka) (Backend Api Server)
+- [**Arnav Sharda**](https://github.com/arnav7897) (Frontend Developer)
+- [**Rushikesh Iche**](https://github.com/RushikeshIche) (Backend Developer)
