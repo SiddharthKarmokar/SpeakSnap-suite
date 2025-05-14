@@ -1,22 +1,24 @@
-# Stage 1: Build frontend
+# Stage 1: Build frontend (optional – only if needed for integration)
 FROM node:18 AS frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install vite@4.4.0
 RUN npm install
 COPY frontend/ ./
+RUN npm run build
 
-# Stage 2: Final production image (no separate backend build)
+# Stage 2: Production image for backend
 FROM node:18-slim
 WORKDIR /app
 
 # Copy backend files
 COPY backend/ ./backend
-# Install dependencies for backend
 WORKDIR /app/backend
 RUN npm install
 
-# Install dotenv CLI for runtime env var support
+# Copy built frontend (optional – comment if Vercel handles frontend)
+# COPY --from=frontend-build /app/frontend/dist ../frontend/dist
+
+# Install dotenv CLI
 RUN npm install -g dotenv-cli
 
 ENV NODE_ENV=production
