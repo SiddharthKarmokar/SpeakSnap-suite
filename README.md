@@ -232,8 +232,8 @@ The response schema is as follows:
 
 ## 📄 Repositories
 
-* [🧠 speaksnap-core (Python)](./core) – Gemini + LangChain backend
-* [💻 speaksnap-suite (JS)](./suite) – Backend (Node.js) and Frontend (React)
+* [🧠 speaksnap-core (Python)](https://github.com/SiddharthKarmokar/SpeakSnap-core.git) – Gemini + LangChain backend
+* [💻 speaksnap-suite (JS)](https://github.com/SiddharthKarmokar/SpeakSnap-suite.git) – Backend (Node.js) and Frontend (React)
 
 ---
 
