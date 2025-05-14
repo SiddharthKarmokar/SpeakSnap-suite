@@ -1,0 +1,178 @@
+
+# SpeakSnap 🧠💬
+
+**SpeakSnap** is an AI-powered meeting companion that enhances real-time conversations by identifying and summarizing domain-specific terms as you speak — helping everyone stay on the same page.
+
+Perfect for technical discussions, onboarding sessions, or interdisciplinary meetings, SpeakSnap provides live contextual explanations of complex terms right inside your video call.
+
+---
+
+## ✨ Features
+
+- 🗣️ **Real-time Audio Transcription** using Azure Speech-to-Text  
+- 🧠 **Contextual Term Detection** with Google's Gemini API via LangChain  
+- 💡 **Dynamic Popups** in the frontend to display term summaries live during meetings  
+- 🎥 **Jitsi Meet Integration** for live video/audio conferencing  
+- 📦 **Modular Architecture** split into Core (AI) and Suite (App)
+
+---
+
+## 🧱 Architecture Overview
+
+| Component        | Description                                                                 |
+|------------------|-----------------------------------------------------------------------------|
+| **Core**         | Python module that uses Gemini + LangChain to process domain-specific terms |
+| **Suite**        | JavaScript backend and frontend with Azure STT, Jitsi, and term popup UI    |
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-org/speaksnap.git
+cd speaksnap
+````
+
+---
+
+## 🧠 Core (Gemini + LangChain) – `core/`
+
+The **Core** handles all the AI-based processes, such as interacting with the Gemini API to detect and summarize domain-specific terms during the meeting.
+
+### Setup
+
+1. Navigate to the `core/` directory:
+
+   ```bash
+   cd core
+   ```
+
+2. Create and activate a virtual environment:
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate        # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Configure `.env`
+
+Create a `.env` file in the `core/` directory with your **Google Gemini API key**:
+
+```env
+GOOGLE_API_KEY=your_google_gemini_api_key_here
+```
+
+### Run
+
+Start the core service, which will handle term detection and summarization:
+
+```bash
+python main.py
+```
+
+---
+
+## 💻 Suite (Backend + Frontend) – `suite/`
+
+The **Suite** is responsible for the frontend UI and the backend WebSocket server that connects to the core service.
+
+### 🔧 Backend Setup
+
+1. Navigate to the `suite/backend` directory:
+
+   ```bash
+   cd suite/backend
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+   If you face any issues, try:
+
+   ```bash
+   npm install vite@4.0.0
+   ```
+
+### Configure `.env`
+
+Create a `.env` file in `suite/backend/` with the following environment variables:
+
+```env
+MONGO_URI=your_mongodb_connection_string
+AZURE_SPEECH_KEY=your_azure_speech_key
+AZURE_REGION=your_azure_region
+```
+
+### Start Backend
+
+Start the backend WebSocket server, which will handle real-time speech-to-text data and interact with the Core:
+
+```bash
+node server.js
+```
+
+---
+
+### 🎨 Frontend Setup
+
+1. Navigate to the `suite/frontend/SpeakSuit` directory:
+
+   ```bash
+   cd suite/frontend/SpeakSuit
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+   If any issues arise, try:
+
+   ```bash
+   npm install vite@4.0.0
+   ```
+
+### Run Frontend
+
+Start the frontend React app, which will display live term summaries in the meeting:
+
+```bash
+npm run dev
+```
+
+The app will be available at [http://localhost:5173](http://localhost:5173).
+
+---
+
+## ✅ Workflow Summary
+
+1. Start the **Core** service (`python core/main.py`)
+2. Start the **Suite** backend (`node suite/backend/server.js`)
+3. Start the **Suite** frontend (`npm run dev` inside `suite/frontend/SpeakSuit`)
+4. Join a Jitsi meeting and speak — watch contextual definitions appear live!
+
+---
+
+## 📄 Repositories
+
+* [🧠 speaksnap-core (Python)](./core) – Gemini + LangChain backend
+* [💻 speaksnap-suite (JS)](./suite) – Backend (Node.js) and Frontend (React)
+
+---
+
+## 📄 License
+
+MIT License – See individual folders for details.
+
