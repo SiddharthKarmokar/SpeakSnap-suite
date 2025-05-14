@@ -15,181 +15,133 @@ const DB_NAME = 'realtime-transcription';
 const COLLECTION = 'transcripts';
 
 if (!AZURE_SPEECH_KEY || !AZURE_REGION || !MONGO_URI) {
-  console.error("❌ Missing required environment variables.");
+  console.error("❌ Missing environment variables.");
   process.exit(1);
 }
 
 let db;
-const meetingClients = {}; // Store clients by meetingId
+const meetingClients = {};
 
-// Connect to MongoDB
 MongoClient.connect(MONGO_URI)
   .then(client => {
     db = client.db(DB_NAME);
     console.log("✅ Connected to MongoDB");
   })
   .catch(err => {
-    console.error("❌ Failed to connect to MongoDB:", err);
+    console.error("❌ MongoDB connection failed:", err);
     process.exit(1);
   });
 
 server.on('connection', (socket) => {
   console.log('📡 Client connected');
 
-  let recognizer;
-  let pushStream;
+  let recognizer, pushStream;
   let meetingId = null;
   let userId = null;
 
   socket.once('message', async (message) => {
     try {
-      const parsedMessage = JSON.parse(message);
-      meetingId = parsedMessage.meetingId;
-      userId = parsedMessage.userId;
+      const { meetingId: mId, userId: uId } = JSON.parse(message);
+      meetingId = mId;
+      userId = uId;
 
       if (!meetingId || !userId) {
-        console.error("❌ Missing userId or meetingId");
         socket.send("Error: Missing userId or meetingId.");
         socket.close();
         return;
       }
 
-      console.log(`👤 User ID: ${userId}, 📅 Meeting ID: ${meetingId}`);
+      console.log(`👤 ${userId} joined meeting ${meetingId}`);
 
-      // Add client to the meeting group
-      if (!meetingClients[meetingId]) {
-        meetingClients[meetingId] = [];
-      }
+      meetingClients[meetingId] = meetingClients[meetingId] || [];
       meetingClients[meetingId].push(socket);
 
-      // Send historical summaries to this client
-      try {
-        const previousSummaries = await db.collection(COLLECTION)
-          .find({ meetingId, summary: { $exists: true } })
-          .sort({ timestamp: 1 })
-          .toArray();
+      // Send past summaries
+      const pastSummaries = await db.collection(COLLECTION)
+        .find({ meetingId, summary: { $exists: true } })
+        .sort({ timestamp: 1 })
+        .toArray();
 
-        for (const doc of previousSummaries) {
-          const filteredExplanations = explanations.filter(e => e && e.term && e.explanation);
-          const responsePayload = {
-            summary
-          };
-          if (filteredExplanations.length > 0) {
-            responsePayload.contextual_explanations = filteredExplanations;
-          }
+      for (const doc of pastSummaries) {
+        const { userId: senderId, summary, contextual_explanations = [] } = doc;
+        const filtered = contextual_explanations.filter(e => e?.term && e?.explanation);
 
-          socket.send(`Summary:${doc.userId}=${JSON.stringify(responsePayload)}`);
-        }
-      } catch (err) {
-        console.error("❌ Error fetching historical summaries:", err.message);
+        socket.send(`Summary:${senderId}=${JSON.stringify({ summary, contextual_explanations: filtered })}`);
       }
 
-      // Initialize pushStream and recognizer
       pushStream = speechSdk.AudioInputStream.createPushStream();
       const audioConfig = speechSdk.AudioConfig.fromStreamInput(pushStream);
       const speechConfig = speechSdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_REGION);
       speechConfig.speechRecognitionLanguage = "en-US";
-
       recognizer = new speechSdk.SpeechRecognizer(speechConfig, audioConfig);
 
-      recognizer.recognizing = (s, e) => {
-        if (e.result.text) {
-          socket.send(e.result.text);
-        }
+      recognizer.recognizing = (_, e) => {
+        if (e.result.text) socket.send(e.result.text);
       };
 
-      recognizer.recognized = async (s, e) => {
+      recognizer.recognized = async (_, e) => {
         if (e.result.reason === speechSdk.ResultReason.RecognizedSpeech) {
           const text = e.result.text;
           socket.send(text);
-          console.log("🧠 Final transcript:", text);
+          console.log("🧠 Final:", text);
 
           try {
-            // Save raw transcript
             await db.collection(COLLECTION).insertOne({ text, userId, meetingId, timestamp: new Date() });
 
-            // Call backend summary API
-            const apiResponse = await axios.post('http://52.23.182.233:8080/api/summary/', {
-              text: text,
+            const response = await axios.post('http://52.23.182.233:8080/api/summary/', {
+              text,
               userid: userId,
-              sessionid: meetingId,
+              sessionid: meetingId
             });
 
-            console.log("📨 API Response:", JSON.stringify(apiResponse.data, null, 2));
-            const summary = apiResponse.data.response.summary;
-            const explanations = apiResponse.data.response.contextual_explanations || [];
-
-            const responsePayload = {
-              summary,
-              contextual_explanations: explanations.filter(e => e && e.term && e.explanation)
-            };
-
-            // Save summary + explanations to DB
+            const { summary, contextual_explanations = [] } = response.data.response;
+            const filtered = contextual_explanations.filter(e => e?.term && e?.explanation);
+            console.log('api response is ',response.data);
             await db.collection(COLLECTION).insertOne({
               meetingId,
               userId,
               summary,
-              contextual_explanations: responsePayload.contextual_explanations,
+              contextual_explanations: filtered,
               timestamp: new Date()
             });
 
-            // Send to all clients including sender
-            meetingClients[meetingId].forEach(client => {
-              client.send(`Summary:${userId}=${JSON.stringify(responsePayload)}`);
-            });
+            const payload = `Summary:${userId}=${JSON.stringify({ summary, contextual_explanations: filtered })}`;
+            meetingClients[meetingId]?.forEach(client => client.send(payload));
           } catch (err) {
-            console.error("❌ Error in API or DB operation:", err.message);
-            socket.send("Error: Failed to process summary.");
+            console.error("❌ Summary/API error:", err.message);
+            socket.send("Error processing summary.");
           }
         }
       };
 
-      recognizer.canceled = (s, e) => {
-        console.error("🛑 Recognition canceled:", e.errorDetails || e.reason);
-        socket.send("Recognition canceled: " + (e.errorDetails || e.reason));
-      };
-
-      recognizer.sessionStopped = (s, e) => {
-        console.log("📴 Session stopped.");
-        recognizer.stopContinuousRecognitionAsync();
-      };
-
       recognizer.startContinuousRecognitionAsync(
         () => console.log("🎙️ Recognition started"),
-        (err) => {
-          console.error("❌ Failed to start recognition:", err);
-          socket.send("Server error: Failed to start recognition.");
+        err => {
+          console.error("❌ Start failed:", err);
+          socket.send("Server error: recognition failed.");
           socket.close();
         }
       );
     } catch (err) {
-      console.error("❌ Error processing initial message:", err.message);
-      socket.send("Error: Initial message must be JSON.");
+      console.error("❌ Init error:", err.message);
+      socket.send("Error: Initial message must be valid JSON.");
       socket.close();
     }
   });
 
-  // Handle audio binary data
   socket.on('message', (audioData) => {
     if (audioData instanceof Buffer && pushStream) {
-      try {
-        pushStream.write(audioData);
-      } catch (err) {
-        console.error("❌ Error writing to pushStream:", err.message);
-      }
+      pushStream.write(audioData);
     }
   });
 
   socket.on('close', () => {
     console.log("❎ Client disconnected");
-    try {
-      if (recognizer) recognizer.stopContinuousRecognitionAsync();
-      if (pushStream) pushStream.close();
-      if (meetingId && meetingClients[meetingId]) {
-        meetingClients[meetingId] = meetingClients[meetingId].filter(client => client !== socket);
-      }
-    } catch (err) {
-      console.error("❌ Error during cleanup:", err.message);
+    if (recognizer) recognizer.stopContinuousRecognitionAsync();
+    if (pushStream) pushStream.close();
+
+    if (meetingId) {
+      meetingClients[meetingId] = meetingClients[meetingId]?.filter(c => c !== socket);
     }
   });
 

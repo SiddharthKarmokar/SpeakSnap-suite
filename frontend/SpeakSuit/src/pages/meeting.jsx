@@ -51,7 +51,7 @@ export const Meeting = () => {
       });
     }
   };
-  
+
   let audioContext = null;
   let socket = null;
   let processor = null;
@@ -72,9 +72,7 @@ export const Meeting = () => {
     setActiveTerm(termObj);
     setShowTermPopup(true);
     if (termTimeout) clearTimeout(termTimeout);
-    termTimeout = setTimeout(() => {
-      setShowTermPopup(false);
-    }, 3000);
+    termTimeout = setTimeout(() => setShowTermPopup(false), 3000);
   };
 
   const startAudioStreaming = async () => {
@@ -107,12 +105,12 @@ export const Meeting = () => {
             const json = JSON.parse(raw);
 
             if (json.summary) {
-              setSummaries((prev) => [...prev, json.summary]);
+              setSummaries((prev) => [...prev, `${user}: ${json.summary}`]);
             }
 
             if (json.contextual_explanations && json.contextual_explanations.length > 0) {
-              const newTerms = json.contextual_explanations.filter(term =>
-                term && term.term && term.explanation
+              const newTerms = json.contextual_explanations.filter(
+                (term) => term && term.term && term.explanation
               );
               if (newTerms.length > 0) {
                 setTechnicalTerms((prev) => [...prev, ...newTerms]);
@@ -137,7 +135,7 @@ export const Meeting = () => {
         }
       };
     } catch (err) {
-      console.error("Mic error:", err);
+      console.error("🎤 Mic error:", err);
     }
   };
 
@@ -166,6 +164,7 @@ export const Meeting = () => {
             className="w-full h-[80vh] mt-4 rounded-xl overflow-hidden shadow-md"
           />
 
+          {/* 🔴 Live Caption */}
           <div
             className={`pointer-events-none absolute bottom-10 left-1/2 transform -translate-x-1/2 px-6 py-3 max-w-[80%] text-center rounded-lg bg-black bg-opacity-70 text-white text-lg font-medium shadow-lg transition-all duration-500 ease-in-out
               ${showLiveCaption ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-4"}`}
@@ -173,7 +172,7 @@ export const Meeting = () => {
             {liveTranscript}
           </div>
 
-          {/* 🧠 Term Popup */}
+          {/* 🧠 Technical Term Popup */}
           <div
             className={`fixed bottom-6 left-6 z-50 w-80 bg-white dark:bg-gray-900 text-black dark:text-white rounded-2xl shadow-xl p-4 border border-gray-300 dark:border-gray-700 transform transition-all duration-500 ease-out
               ${showTermPopup ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 translate-y-8"}`}
@@ -195,6 +194,7 @@ export const Meeting = () => {
           </div>
         </div>
 
+        {/* Sidebar with transcript + summaries + terms */}
         <Sidebar
           isOpen={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
